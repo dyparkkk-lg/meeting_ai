@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Meeting 상태 (v0.1 확장)
+enum MeetingStatus {
+  CREATED       // 생성됨 (presigned URL 발급됨)
+  UPLOADED      // 업로드 완료, 처리 대기 중
+  ASR_DONE      // ASR(전사) 완료
+  SUMMARY_DONE  // LLM 요약 완료
+  MD_DONE       // 마크다운 생성 완료
+  READY         // 모든 처리 완료
+  FAILED        // 처리 실패
+}
+
+// 회의
+model Meeting {
+  id             String        @id @default(uuid())
+  title          String?       // 회의 제목 (선택)
+  status         MeetingStatus @default(CREATED)
+  audioObjectKey String?       // S3/MinIO 오브젝트 키
+  languageHint   String?       @default("ko") // 언어 힌트 (ko, en, ...)
+  errorMessage   String?       // 실패 시 에러 메시지
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  transcript Transcript?
+  summary    Summary?
+  export     Export?
+
+  @@map("meetings")
+}
+
+// 전사 결과
+model Transcript {
+  id        String   @id @default(uuid())
+  meetingId String   @unique
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  
+  // segments: [{ startMs, endMs, text, speaker?: string|null }]
+  segments  Json     // JSONB로 저장
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("transcripts")
+}
+
+// 요약 결과
+model Summary {
+  id           String   @id @default(uuid())
+  meetingId    String   @unique
+  meeting      Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  
+  // LLM 추출 결과 (JSON)
+  // {
+  //   overallSummary: string[],
+  //   decisions: [{ decision, evidence: [{ startMs, endMs, quote }] }],
+  //   actionItems: [{ task, assigneeCandidate, dueDate, priority, evidence }],
+  //   risks: [],
+  //   openQuestions: []
+  // }
+  result       Json     // JSONB로 저장
+  
+  // 버전 관리 (추후 프롬프트/모델 변경 추적용)
+  promptVersion String?  @default("v0.1")
+  modelVersion  String?  @default("mock")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("summaries")
+}
+
+// 내보내기 결과 (v0.1 추가)
+model Export {
+  id          String   @id @default(uuid())
+  meetingId   String   @unique
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  
+  // 마크다운 콘텐츠 (DB 저장 방식)
+  mdContent   String   @db.Text
+  
+  // (옵션) MinIO에 저장 시 사용
+  mdObjectKey String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("exports")
+}
+
+// (확장용) 용어집/고유명사 사전
+model Glossary {
+  id               String   @id @default(uuid())
+  orgId            String?  // 조직 ID (멀티테넌시용)
+  term             String   // 원래 단어
+  preferredSpelling String  // 선호 표기
+  aliases          Json?    // 다른 표기들 ["AI", "에이아이", "인공지능"]
+  description      String?  // 설명
+  type             String?  // 유형 (person, product, company, etc)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, term])
+  @@map("glossaries")
+}
