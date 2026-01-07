@@ -21,6 +21,7 @@ export interface TranscriptSegment {
 export interface AsrOptions {
   languageHint?: string;
   enableSpeakerDiarization?: boolean;
+  mimeType?: string;  // 오디오 파일 MIME type (예: 'audio/mp4', 'audio/webm')
 }
 
 /**

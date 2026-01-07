@@ -12,7 +12,7 @@
     "api": {
       "type": "application",
       "root": "src/api",
-      "entryFile": "main",
+      "entryFile": "src/api/main",
       "sourceRoot": "src",
       "compilerOptions": {
         "tsConfigPath": "tsconfig.build.json",
@@ -23,7 +23,7 @@
     "worker": {
       "type": "application",
       "root": "src/worker",
-      "entryFile": "main",
+      "entryFile": "src/worker/main",
       "sourceRoot": "src",
       "compilerOptions": {
         "tsConfigPath": "tsconfig.build.json",

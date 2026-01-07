@@ -25,9 +25,9 @@
     "prisma:studio": "prisma studio",
     "docker:infra": "docker compose up postgres redis minio minio_init -d",
     "docker:infra:down": "docker compose down",
-    "dev": "concurrently \"npm run start:api:dev\" \"npm run start:worker:dev\"",
-    "dev:api": "npm run start:api:dev",
-    "dev:worker": "npm run start:worker:dev"
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:worker\"",
+    "dev:api": "nest start api --watch",
+    "dev:worker": "nest start worker --watch"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.705.0",

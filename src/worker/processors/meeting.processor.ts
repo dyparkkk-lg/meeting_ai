@@ -86,9 +86,14 @@ export class MeetingProcessor extends WorkerHost {
 
     // ASR 처리
     const audioUrl = await this.storage.generateDownloadUrl(meeting.audioObjectKey!);
+    const mimeType = this.getMimeTypeFromObjectKey(meeting.audioObjectKey!);
+    
+    this.logger.log(`Audio MIME type: ${mimeType}`);
+    
     const asrResult = await this.asrProvider.transcribe(audioUrl, {
       languageHint: meeting.languageHint || 'ko',
       enableSpeakerDiarization: true,
+      mimeType,
     });
 
     // Transcript upsert (중복 실행 안전)
@@ -263,6 +268,26 @@ export class MeetingProcessor extends WorkerHost {
     });
 
     this.logger.error(`Meeting ${meetingId} marked as FAILED: ${errorMessage}`);
+  }
+
+  /**
+   * Object key에서 MIME type 추출
+   */
+  private getMimeTypeFromObjectKey(objectKey: string): string {
+    const ext = objectKey.split('.').pop()?.toLowerCase() || '';
+    
+    const extToMime: Record<string, string> = {
+      'm4a': 'audio/mp4',
+      'mp4': 'audio/mp4',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'webm': 'audio/webm',
+      'ogg': 'audio/ogg',
+      'oga': 'audio/ogg',
+      'flac': 'audio/flac',
+    };
+    
+    return extToMime[ext] || 'audio/webm';
   }
 
   /**
